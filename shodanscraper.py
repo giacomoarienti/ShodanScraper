@@ -6,8 +6,7 @@ import threading
 import statusbar
 
 class ShodanScraper(object):
-	VERSION = "4.2"
-	OFILE = "shodan_output.txt"
+	VERSION = "0.1"
 
 	USER_AGENTS = ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Safari/537.36", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1 (compatible; AdsBot-Google-Mobile; +http://www.google.com/mobile/adsbot.html)", "Mozilla/5.0 (Linux; Android 5.0; SM-G920A) AppleWebKit (KHTML, like Gecko) Chrome Mobile Safari (compatible; AdsBot-Google-Mobile; +http://www.google.com/mobile/adsbot.html)", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3599.0 Safari/537.36", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.140 Safari/537.36 Edge/18.18247", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; rv:11.0) like Gecko", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3599.0 Safari/537.36", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3599.0 Safari/537.36", "Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; rv:11.0) like Gecko", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3599.0 Safari/537.36", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3599.0 Safari/537.36", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3599.0 Safari/537.36", "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"]
 	IP_REGEX = "^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$}"
@@ -16,8 +15,9 @@ class ShodanScraper(object):
 
 	THREADS = []
 
-	def __init__(self, settings_file="") -> None:
+	def __init__(self, settings_file="shodan_settings.json", ofile="shodan_output.txt") -> None:
 		self.settings_file = settings_file
+		self.ofile = ofile
 
 		self.delay = 0
 		self.api_key = ""
@@ -80,7 +80,7 @@ class ShodanScraper(object):
 			print("Error: search query cannot be empty")
 			exit(-1)
 
-	def check_dependencies(self) -> None:
+	def check_dependencies(self):
 		try:
 			import shodan, requests
 		except ImportError:
@@ -88,7 +88,7 @@ class ShodanScraper(object):
 			print("pip3 install -r requirements.txt")
 			exit(-1)
 	
-	def test_api(self) -> int:
+	def test_api(self):
 		import requests
 
 		url = "https://api.shodan.io/api-info?key=" + self.api_key
@@ -122,7 +122,7 @@ class ShodanScraper(object):
 					print(f"Credits: {str(credits)}\n")
 					return
 
-	def build_search_query(self) -> None:
+	def build_search_query(self):
 		q = self.search
 		if(self.country != ""):
 			q += ' country:"' + self.country + '"'
@@ -132,10 +132,10 @@ class ShodanScraper(object):
 			q += ' org:"' + self.org + '"' 
 		self.query = q
 
-	def display_message(self) -> None:
+	def display_message(self):
 		print(f"ShodanScraper v{self.VERSION}:\nStarting scraping...\n")
 
-	def check_query(self) -> None:
+	def check_query(self):
 		results = self.shodan.search(self.query)
 		if(results == 0):
 			print("Error: failed to find any result")
@@ -145,29 +145,29 @@ class ShodanScraper(object):
 
 		print(f'Results found: {self.resultsn}')
 
-	def init_shodan(self) -> None:
+	def init_shodan(self):
 		import shodan
 		self.shodan = shodan.Shodan(self.api_key)
 
-	def init_status_bar(self) -> None:
+	def init_status_bar(self):
 		self.pages = self.resultsn // 100 + 1
 		self.status_bar = statusbar.StatusBar(total=self.pages)
 
-	def ip_scarpe(self, page) -> None:
+	def ip_scarpe(self, page: int):
 		while True:
 			time.sleep(self.delay)
 
 			try:
 				results = self.shodan.search(self.query, page=page)
 				for result in results['matches']:
-					with open(self.OFILE, "a") as f:
+					with open(self.ofile, "a") as f:
 						f.write(result['ip_str'] + "\n")
 				return
 			except:
 				time.sleep(self.delay)
 				continue
 
-	def start_threads(self) -> None:
+	def start_threads(self):
 		for p in range(self.pages):
 			t = threading.Thread(target=self.ip_scarpe, args=(p,))
 			t.start()
@@ -180,17 +180,17 @@ class ShodanScraper(object):
 			self.BAR_PROGRESS += 1
 			self.status_bar.update(self.BAR_PROGRESS)
 
-	def clean_data(self) -> None:		
-		with open(self.OFILE, "r") as f:
+	def clean_data(self):		
+		with open(self.ofile, "r") as f:
 			lines = set(f.readlines())
-		with open(self.OFILE, "w") as f:
+		with open(self.ofile, "w") as f:
 			for line in lines:
 				if(re.search(self.IP_REGEX, line)):
 					f.write(line)
 
 		print("\n\nScraping done")
 
-	def start(self) -> None:
+	def start(self):
 		self.check_dependencies()
 
 		self.test_api()
@@ -212,6 +212,4 @@ class ShodanScraper(object):
 		self.THREADS = []
 
 
-ShodanScraper(
-	settings_file="shodan_settings.json"
-).start()
+ShodanScraper().start()
