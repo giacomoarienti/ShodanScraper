@@ -151,7 +151,7 @@ class ShodanScraper(object):
 
 	def init_status_bar(self):
 		self.pages = self.resultsn // 100 + 1
-		self.status_bar = statusbar.StatusBar(total=self.pages)
+		self.status_bar = statusbar.StatusBar(self.pages)
 
 	def ip_scarpe(self, page: int):
 		while True:
